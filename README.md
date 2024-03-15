@@ -16,7 +16,7 @@ Default keyboard layout is:
 | --- | --- | --- | --- |
 | Q | W | E | R |
 | A | S | D | F |
-| Z | X | C | F |
+| Z | X | C | V |
 
 Layout can be changed by editing data/keyConfig.ini - you should enter the key scancodes on the right side. 
 
