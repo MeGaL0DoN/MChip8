@@ -98,11 +98,11 @@
     <ClInclude Include="Libs\MiniAudio\miniaudio.h">
       <Filter>Header Files\MiniAudio</Filter>
     </ClInclude>
+    <ClInclude Include="Quirks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="data\imgui.ini">
-      <Filter>data</Filter>
-    </None>
     <None Include="data\Shaders\fragmentShader.glsl">
       <Filter>data\shaders</Filter>
     </None>

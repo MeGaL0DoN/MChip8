@@ -196,6 +196,19 @@ void renderImGUI()
 
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Quirks"))
+        {
+            ImGui::Checkbox("VFReset", &Quirks::VFReset);
+            ImGui::Checkbox("Shifting", &Quirks::Shifting);
+            ImGui::Checkbox("Jumping", &Quirks::Jumping);
+            ImGui::Checkbox("Clipping", &Quirks::Clipping);
+            ImGui::Checkbox("Memory Increment", &Quirks::MemoryIncrement);
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            if (ImGui::Button("Reset to Default")) Quirks::Reset();
+            ImGui::EndMenu();
+        }
         if (pause)
         {
             ImGui::Separator();

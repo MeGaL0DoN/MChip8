@@ -4,6 +4,7 @@
 #include <fstream>
 #include <random>
 #include "MiniAudio/miniaudio.h"
+#include "Quirks.h"
 
 class ChipCore
 {
@@ -18,6 +19,7 @@ public:
 	{
 		initialize();
 		ma_engine_init(NULL, &soundEngine);
+		ma_engine_set_volume(&soundEngine, 0.1f);
 	}
 
 	inline bool getPixel(uint8_t x, uint8_t y)
@@ -63,7 +65,8 @@ public:
 		const uint16_t opcode = (RAM[pc] << 8) | RAM[pc + 1];
 		bool incrementCounter { true };
 
-		uint8_t& regX = V[(opcode & 0x0F00) >> 8];
+		uint8_t xOperand = (opcode & 0x0F00) >> 8;
+		uint8_t& regX = V[xOperand];
 		const uint8_t regY = V[(opcode & 0x00F0) >> 4];
 
 		const uint8_t doubleNibble = opcode & 0x00FF;
@@ -116,12 +119,15 @@ public:
 				break;
 			case 0x0001:
 				regX |= regY;
+				if (Quirks::VFReset) V[0xF] = 0;
 				break;
 			case 0x0002:
 				regX &= regY;
+				if (Quirks::VFReset) V[0xF] = 0;
 				break;
 			case 0x0003:
 				regX ^= regY;
+				if (Quirks::VFReset) V[0xF] = 0;
 				break;
 			case 0x0004:
 			{
@@ -139,7 +145,7 @@ public:
 			}
 			case 0x0006: 
 			{
-			//	regX = regY;
+			    if (!Quirks::Shifting) regX = regY;
 				uint8_t lsb = regX & 1;
 				regX >>= 1;
 				V[0xF] = lsb;
@@ -151,7 +157,7 @@ public:
 				break;
 			case 0x000E: 
 			{
-				//regX = regY;
+				if (!Quirks::Shifting) regX = regY;
 				uint8_t msb = (regX & 0x80) >> 7;
 				regX <<= 1;
 				V[0xF] = msb;
@@ -166,7 +172,8 @@ public:
 			I = memoryAddr;
 			break;
 		case 0xB000:
-			pc = V[0] + memoryAddr;
+			if (Quirks::Jumping) pc = regX + memoryAddr;
+			else pc = V[0] + memoryAddr;
 			incrementCounter = false;
 			break;
 		case 0xC000:
@@ -213,12 +220,14 @@ public:
 				RAM[I + 2] = (regX % 100) % 10;
 				break;
 			case 0x0055:
-				for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++)
+				for (int i = 0; i <= xOperand; i++)
 					RAM[I + i] = V[i];
+				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
 			case 0x0065:
-				for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++)
+				for (int i = 0; i <= xOperand; i++) 
 					V[i] = RAM[I + i];
+				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
 			}
 			break;
@@ -292,7 +301,14 @@ private:
 		{
 			uint8_t spriteRow = RAM[I + i];
 			uint8_t screenY = i + Ypos;
-			if (screenY >= SCRHeight) return;
+
+			if (Quirks::Clipping)
+			{
+				if (screenY >= SCRHeight)
+					return;
+			}
+			else
+				screenY %= SCRHeight;
 
 			for (int j = 0; j < width; j++)
 			{
@@ -300,7 +316,14 @@ private:
 				if (spritePixel)
 				{
 					uint8_t screenX = j + Xpos;
-					if (screenX >= SCRWidth) return;
+
+					if (Quirks::Clipping)
+					{
+						if (screenX >= SCRWidth)
+							return;
+					}
+					else
+						screenX %= SCRWidth;
 
 					bool screenPixel = getPixel(screenX, screenY);
 					if (screenPixel) V[0xF] = 1;
