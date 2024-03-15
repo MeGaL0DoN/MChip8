@@ -20,7 +20,7 @@ Default keyboard layout is:
 
 Layout can be changed by editing data/keyConfig.ini - you should enter the key scancodes on the right side. 
 
-![Screenshot 2024-03-14 175927](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/ab9d796e-a2b9-4c25-8d8a-f8d091879f92)
+![Screenshot 2024-03-14 180236](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/deef2005-45af-4075-9c2e-8d42e336dec8)
 Or with pixel borders
 ![Screenshot 2024-03-14 175903](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/b1eb167e-f683-4abc-bdd9-2e745621d1ce)
 
