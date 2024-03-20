@@ -10,12 +10,19 @@ Currently only windows build using visual studio is supported, however all libra
 
 ### Usage:
 
-Use File->load to load game ROM. You can use File->Reload or ESC to restart current ROM. Press TAB to put game on pause. You can change looks/CPU frequency in settings. 
-Default keyboard layout is: 1234 QWER ASDF ZXCV. Layout can be changed by editing data/keyConfig.ini - you should enter the key scancodes on the right side. 
+Use File->load to load game ROM. File->Reload or ESC to restart current ROM. Press TAB to put game on pause. Looks/CPU frequency can be changed in settings. 
+Default keyboard layout is: 
+| 1 | 2 | 3 | 4 |
+| --- | --- | --- | --- |
+| Q | W | E | R |
+| A | S | D | F |
+| Z | X | C | V |
 
-![Screenshot 2024-03-13 221822](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/c5dd9e0a-857a-4f35-aea7-364e23446e9c)
+Layout can be changed by editing data/keyConfig.ini - you should enter the key scancodes on the right side. 
+
+![Screenshot 2024-03-14 180236](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/deef2005-45af-4075-9c2e-8d42e336dec8)
 Or with pixel borders
-![Screenshot 2024-03-13 223133](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/ba192255-37a4-4266-8278-d83bab89b8f2)
+![Screenshot 2024-03-14 175903](https://github.com/MeGaLoDoN228/MChip8/assets/62940883/b1eb167e-f683-4abc-bdd9-2e745621d1ce)
 
 
 ### Some games running:
@@ -32,6 +39,8 @@ Or with pixel borders
 
 * 1.0
     * Initial Release
+* 1.1
+    * Added GUI quirks configuration
 
 ## License
 
