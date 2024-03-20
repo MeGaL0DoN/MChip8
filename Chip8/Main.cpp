@@ -84,7 +84,6 @@ void setBuffers()
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
     auto vertices = getVertices();
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);
 
@@ -331,7 +330,10 @@ void setImGUI()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); 
     io.IniFilename = "data/imgui.ini";
-    io.Fonts->AddFontFromFileTTF("data/roboto.ttf", 17);
+
+    const int resolutionX = glfwGetVideoMode(glfwGetPrimaryMonitor())->width;
+    io.Fonts->AddFontFromFileTTF("data/roboto.ttf", (resolutionX / 1920) * 17);
+
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
