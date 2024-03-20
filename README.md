@@ -41,6 +41,8 @@ Or with pixel borders
     * Initial Release
 * 1.1
     * Added GUI quirks configuration
+* 1.1.1
+    * Fixed ImGUI interface to be resolution-independent
 
 ## License
 
