@@ -43,6 +43,8 @@ Or with pixel borders
     * Added GUI quirks configuration
 * 1.1.1
     * Fixed ImGUI interface to be resolution-independent
+* 1.1.2
+    * Fixed importing of ROMs with non-ASCII characters in the path
 
 ## License
 
