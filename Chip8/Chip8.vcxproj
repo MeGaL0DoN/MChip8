@@ -42,6 +42,7 @@
     <ClInclude Include="Libs\ImGUI\imstb_textedit.h" />
     <ClInclude Include="Libs\ImGUI\imstb_truetype.h" />
     <ClInclude Include="Libs\MiniAudio\miniaudio.h" />
+    <ClInclude Include="Libs\nfd\nfd.hpp" />
     <ClInclude Include="Quirks.h" />
     <ClInclude Include="Shader.h" />
   </ItemGroup>

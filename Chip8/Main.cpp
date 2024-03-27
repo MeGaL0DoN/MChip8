@@ -6,7 +6,7 @@
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
-#include "nfd/nfd.h"
+#include "nfd/nfd.hpp"
 
 #include <array>
 #include <map>
@@ -31,7 +31,8 @@ float pixel_XGap, pixel_YGap;
 float widthUnit, heightUnit;
 int viewport_width, viewport_height;
 
-std::string currentPath { std::filesystem::current_path().string() };
+const std::wstring defaultPath { std::filesystem::current_path().wstring()};
+const nfdnfilteritem_t filterItem[2] = { {L"ROM File", L"ch8,bin"} };
 
 void draw() {
     for (int x = 0; x < ChipCore::SCRWidth; x++)
@@ -95,8 +96,8 @@ void setBuffers()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-std::string currentROMPAth {};
-void loadROM(std::string_view path)
+std::wstring currentROMPAth {};
+void loadROM(const wchar_t* path)
 {
     chipCore.loadROM(path);
     pause = false;
@@ -115,16 +116,14 @@ void renderImGUI()
         {
             if (ImGui::MenuItem("Load ROM")) 
             {
-                nfdchar_t* outPath { nullptr };
-                nfdresult_t result = NFD_OpenDialog("ch8,bin", currentPath.c_str(), &outPath);
+                NFD::UniquePathN outPath;
+                nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1, defaultPath.c_str());
 
-                if (result == NFD_OKAY) {
-                    loadROM(outPath);
-                    free(outPath);
-                }
+                if (result == NFD_OKAY) 
+                    loadROM(outPath.get());
             }
             else if (ImGui::MenuItem("Reload ROM", "(Esc)"))
-                loadROM(currentROMPAth);
+                loadROM(currentROMPAth.c_str());
 
             ImGui::EndMenu();
         }
@@ -253,7 +252,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         if (key == GLFW_KEY_ESCAPE)
         {
-            loadROM(currentROMPAth);
+            loadROM(currentROMPAth.c_str());
             return;
         }
         if (key == GLFW_KEY_TAB)
@@ -352,8 +351,9 @@ int main() {
     pixelShader.setFloat4("color", whiteColor);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
+    NFD::Guard nfdGuard;
     loadKeyConfig();
-    loadROM("ROMs/chipLogo.ch8");
+    loadROM(L"ROMs/chipLogo.ch8");
 
     double lastFrameTime = glfwGetTime();
     double cpuFrequencyTimer{};

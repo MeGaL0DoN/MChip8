@@ -36,11 +36,11 @@ public:
 		}
 	}
 
-	void loadROM(std::string_view path)
+	void loadROM(const wchar_t* path)
 	{
 		initialize();
 
-		std::ifstream ifs(path.data(), std::ios::binary | std::ios::ate);
+		std::ifstream ifs(path, std::ios::binary | std::ios::ate);
 		std::ifstream::pos_type pos = ifs.tellg();
 
 		ifs.seekg(0, std::ios::beg);

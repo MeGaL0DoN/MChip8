@@ -101,6 +101,9 @@
     <ClInclude Include="Quirks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Libs\nfd\nfd.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="data\Shaders\fragmentShader.glsl">
