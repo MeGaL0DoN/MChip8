@@ -45,6 +45,8 @@ Or with pixel borders
     * Fixed ImGUI interface to be resolution-independent
 * 1.1.2
     * Fixed importing of ROMs with non-ASCII characters in the path
+* 1.1.3
+    * A lot fixes, probably final version
 
 ## License
 
