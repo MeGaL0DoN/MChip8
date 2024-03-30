@@ -84,7 +84,7 @@ public:
 	{
 		if (inputReg != nullptr) return;
 
-		const uint16_t opcode = (RAM[pc & 0xFFE] << 8) | RAM[(pc + 1) & 0xFFF];
+		const uint16_t opcode = (RAM[pc & 0xFFF] << 8) | RAM[(pc + 1) & 0xFFF];
 		bool incrementCounter { true };
 
 		const uint8_t xOperand = (opcode & 0x0F00) >> 8;
