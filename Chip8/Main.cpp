@@ -33,7 +33,7 @@ float widthUnit, heightUnit;
 int viewport_width, viewport_height;
 
 const std::wstring defaultPath { std::filesystem::current_path().wstring()};
-const nfdnfilteritem_t filterItem[2] = { {L"ROM File", L"ch8,bin"} };
+const nfdnfilteritem_t filterItem[2] = { {L"ROM File", L"ch8,bin,c8"} };
 
 void draw() {
     for (int x = 0; x < ChipCore::SCRWidth; x++)
@@ -132,6 +132,7 @@ void renderImGUI()
         {
             static bool showForegroundPicker { false };
             static bool showBackgroundPicker { false };
+            static int volume { 50 };
 
             ImGui::SeparatorText("CPU");
             ImGui::SliderInt("CPU Frequency", &chipCore.CPUfrequency, 60, 1500);
@@ -141,13 +142,15 @@ void renderImGUI()
             ImGui::Separator();
             ImGui::Spacing();
 
-            static int volume {50};
-            if (ImGui::SliderInt("Volume", &volume, 0, 100))
-                chipCore.volume = volume / 100.0;
+            if (chipCore.enableSound)
+            {
+                if (ImGui::SliderInt("Volume", &volume, 0, 100))
+                    chipCore.setVolume(volume / 100.0);
+            }
 
             ImGui::SeparatorText("UI");
 
-            if (ImGui::Checkbox("Pixel Borders", &pixelBorders))
+            if (ImGui::Checkbox("Pixel Gaps", &pixelBorders))
                 updateVertices();
 
             static ImVec4 foregroundColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -202,7 +205,7 @@ void renderImGUI()
                 chipCore.enableSound = true;
 
                 volume = 50;
-                chipCore.volume = 0.5;
+                chipCore.setVolume(0.5);
             }
 
             ImGui::EndMenu();
@@ -384,14 +387,14 @@ int main() {
 
             if (!pause)
             {
+                chipCore.updateTimers();
+
                 double cycles = (chipCore.CPUfrequency / 60.0) + cpuRemainderCycles;
                 int wholeCycles { static_cast<int>(cycles) };
                 cpuRemainderCycles = cycles - wholeCycles;
 
                 for (int i = 0; i < wholeCycles; i++)
                     chipCore.emulateCycle();
-
-                chipCore.updateTimers();
             }
 
             glfwPollEvents();

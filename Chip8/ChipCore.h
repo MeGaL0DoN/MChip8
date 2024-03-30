@@ -33,7 +33,6 @@ public:
 
 	int CPUfrequency { 500 };
 	bool enableSound { true };
-	double& volume { waveform.config.amplitude };
 
 	ChipCore()
 	{
@@ -53,6 +52,10 @@ public:
 			*inputReg = key;
 			inputReg = nullptr;
 		}
+	}
+	void setVolume(double val)
+	{
+		ma_waveform_set_amplitude(&waveform, val);
 	}
 
 	void loadROM(const wchar_t* path)
@@ -80,9 +83,8 @@ public:
 	void emulateCycle()
 	{
 		if (inputReg != nullptr) return;
-		if (pc >= sizeof(RAM)) return;
 
-		const uint16_t opcode = (RAM[pc] << 8) | RAM[pc + 1];
+		const uint16_t opcode = (RAM[pc & 0xFFE] << 8) | RAM[(pc + 1) & 0xFFF];
 		bool incrementCounter { true };
 
 		const uint8_t xOperand = (opcode & 0x0F00) >> 8;
@@ -104,7 +106,7 @@ public:
 				clearScreen();
 				break;
 			case 0x00EE: 
-				pc = stack[--sp];
+				pc = stack[(--sp) & 0xF];
 				break;
 			}
 			break;
@@ -114,7 +116,7 @@ public:
 			incrementCounter = false;
 			break;  
 		case 0x2000:
-			stack[sp++] = pc;
+			stack[(sp++) & 0xF] = pc;
 			pc = memoryAddr;
 			incrementCounter = false;
 			break;
@@ -247,25 +249,19 @@ public:
 				I = (regX & 0xF) * 0x5;
 				break;
 			case 0x0033:
-				if (I + 2 >= sizeof(RAM)) break;
-
-				RAM[I] = regX / 100;
-				RAM[I + 1] = (regX / 10) % 10;
-				RAM[I + 2] = (regX % 100) % 10;
+				RAM[I & 0xFFF] = regX / 100;
+				RAM[(I + 1) & 0xFFF] = (regX / 10) % 10;
+				RAM[(I + 2) & 0xFFF] = (regX % 100) % 10;
 				break;
 			case 0x0055:
-				if (I + xOperand + 1 >= sizeof(RAM)) break;
-
-				for (int i = 0; i <= xOperand; i++)
-					RAM[I + i] = V[i];
+				for (int i = 0; i <= (xOperand & 0xF); i++)
+					RAM[(I + i) & 0xFFF] = V[i];
 
 				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
 			case 0x0065:
-			    if (I + xOperand + 1 >= sizeof(RAM)) break;
-
-				for (int i = 0; i <= xOperand; i++) 
-					V[i] = RAM[I + i];
+				for (int i = 0; i <= (xOperand & 0xF); i++) 
+					V[i] = RAM[(I + i) & 0xFFF];
 
 				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
@@ -323,19 +319,19 @@ private:
 
 	void initAudio()
 	{
-		constexpr double volume = 0.5;
+		constexpr double initialVolume = 0.5;
 		constexpr int frequency = 440;
 
 		ma_waveform_config config;
 		ma_device_config deviceConfig;
 
-		config = ma_waveform_config_init(ma_format_f32, 2, 44100, ma_waveform_type_square, volume, frequency);
+		config = ma_waveform_config_init(ma_format_f32, 2, 44100, ma_waveform_type_square, initialVolume, frequency);
 		ma_waveform_init(&config, &waveform);
 
 		deviceConfig = ma_device_config_init(ma_device_type_playback);
 		deviceConfig.playback.format = ma_format_f32;
 		deviceConfig.playback.channels = 2;
-		deviceConfig.sampleRate = 48000;
+		deviceConfig.sampleRate = 44100;
 		deviceConfig.dataCallback = sound_data_callback;
 		deviceConfig.pUserData = &sound_data;
 
@@ -365,7 +361,7 @@ private:
 			if (Quirks::Clipping)
 			{
 				if (screenY >= SCRHeight)
-					return;
+					continue;
 			}
 			else
 				screenY %= SCRHeight;
@@ -380,7 +376,7 @@ private:
 					if (Quirks::Clipping)
 					{
 						if (screenX >= SCRWidth)
-							return;
+							continue;
 					}
 					else
 						screenX %= SCRWidth;
