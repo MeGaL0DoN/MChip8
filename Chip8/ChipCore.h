@@ -6,6 +6,25 @@
 #include "MiniAudio/miniaudio.h"
 #include "Quirks.h"
 
+struct soundData
+{
+	ma_waveform* waveForm;
+	uint8_t& soundTimer;
+	bool& enableSound;
+};
+
+inline void sound_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+	soundData* data = (soundData*)pDevice->pUserData;
+	if (data->waveForm == nullptr)
+		return;
+
+	if (data->enableSound && data->soundTimer > 0)
+	{
+		ma_waveform_read_pcm_frames(data->waveForm, pOutput, frameCount, nullptr);
+	}
+}
+
 class ChipCore
 {
 public:
@@ -14,12 +33,12 @@ public:
 
 	int CPUfrequency { 500 };
 	bool enableSound { true };
+	double& volume { waveform.config.amplitude };
 
 	ChipCore()
 	{
 		initialize();
-		ma_engine_init(NULL, &soundEngine);
-		ma_engine_set_volume(&soundEngine, 0.1f);
+		initAudio();
 	}
 
 	inline bool getPixel(uint8_t x, uint8_t y)
@@ -43,31 +62,34 @@ public:
 		std::ifstream ifs(path, std::ios::binary | std::ios::ate);
 		std::ifstream::pos_type pos = ifs.tellg();
 
-		ifs.seekg(0, std::ios::beg);
-		ifs.read(reinterpret_cast<char*>(&RAM[0x200]), pos);
+		if (pos <= sizeof(RAM) - 0x200)
+		{
+			ifs.seekg(0, std::ios::beg);
+			ifs.read(reinterpret_cast<char*>(&RAM[0x200]), pos);
+		}
+
 		ifs.close();
 	}
 
 	void updateTimers()
 	{
 		if (delay_timer > 0) delay_timer--;
-		if (sound_timer > 0)
-		{
-			sound_timer--;
-			if (enableSound) beep();
-		}
+		if (sound_timer > 0) sound_timer--;
 	}
 
 	void emulateCycle()
 	{
 		if (inputReg != nullptr) return;
+		if (pc >= sizeof(RAM)) return;
 
 		const uint16_t opcode = (RAM[pc] << 8) | RAM[pc + 1];
 		bool incrementCounter { true };
 
-		uint8_t xOperand = (opcode & 0x0F00) >> 8;
-		uint8_t& regX = V[xOperand];
-		const uint8_t regY = V[(opcode & 0x00F0) >> 4];
+		const uint8_t xOperand = (opcode & 0x0F00) >> 8;
+		const uint8_t yOperand = (opcode & 0x00F0) >> 4;
+
+		uint8_t& regX = V[xOperand & 0xF];
+		const uint8_t regY = V[yOperand & 0xF];
 
 		const uint8_t doubleNibble = opcode & 0x00FF;
 		const uint16_t memoryAddr = opcode & 0x0FFF;
@@ -76,12 +98,12 @@ public:
 		{
 		case 0x0000:
 		{
-			switch (opcode & 0x000F)
+			switch (opcode & 0x0FFF)
 			{
-			case 0x0000: 
+			case 0x00E0: 
 				clearScreen();
 				break;
-			case 0x000E: 
+			case 0x00EE: 
 				pc = stack[--sp];
 				break;
 			}
@@ -103,7 +125,12 @@ public:
 			if (regX != doubleNibble) skipNextInstr();
 			break;
 		case 0x5000:
-			if (regX == regY) skipNextInstr();
+			switch (opcode & 0x000F)
+			{
+			case 0:
+				if (regX == regY) skipNextInstr();
+				break;
+			}
 			break;
 		case 0x6000:
 			regX = doubleNibble;
@@ -166,7 +193,12 @@ public:
 			}
 			break;
 		case 0x9000:
-			if (regX != regY) skipNextInstr();
+			switch (opcode & 0x000F)
+			{
+			case 0:
+				if (regX != regY) skipNextInstr();
+				break;
+			}
 			break;
 		case 0xA000:
 			I = memoryAddr;
@@ -183,13 +215,13 @@ public:
 			drawSprite(regX % SCRWidth, regY % SCRHeight, opcode & 0x000F);
 			break;
 		case 0xE000:
-			switch (opcode & 0x000F)
+			switch (opcode & 0x00FF)
 			{
-			case 0x000E:
-				if (keys[regX]) skipNextInstr();
+			case 0x009E:
+				if (keys[regX & 0xF]) skipNextInstr();
 				break;
-			case 0x0001:
-				if (!keys[regX]) skipNextInstr();
+			case 0x00A1:
+				if (!keys[regX & 0xF]) skipNextInstr();
 				break;
 			}
 			break;
@@ -212,21 +244,29 @@ public:
 				sound_timer = regX;
 				break;
 			case 0x0029:
-				I = regX * 0x5;
+				I = (regX & 0xF) * 0x5;
 				break;
 			case 0x0033:
+				if (I + 2 >= sizeof(RAM)) break;
+
 				RAM[I] = regX / 100;
 				RAM[I + 1] = (regX / 10) % 10;
 				RAM[I + 2] = (regX % 100) % 10;
 				break;
 			case 0x0055:
+				if (I + xOperand + 1 >= sizeof(RAM)) break;
+
 				for (int i = 0; i <= xOperand; i++)
 					RAM[I + i] = V[i];
+
 				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
 			case 0x0065:
+			    if (I + xOperand + 1 >= sizeof(RAM)) break;
+
 				for (int i = 0; i <= xOperand; i++) 
 					V[i] = RAM[I + i];
+
 				if (Quirks::MemoryIncrement) I += xOperand + 1;
 				break;
 			}
@@ -277,10 +317,30 @@ private:
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 	};
 
-	ma_engine soundEngine;
-	inline void beep()
+	ma_device soundDevice;
+	ma_waveform waveform;
+	soundData sound_data { &waveform, sound_timer, enableSound };
+
+	void initAudio()
 	{
-		ma_engine_play_sound(&soundEngine, "data/beep.wav", NULL);
+		constexpr double volume = 0.5;
+		constexpr int frequency = 440;
+
+		ma_waveform_config config;
+		ma_device_config deviceConfig;
+
+		config = ma_waveform_config_init(ma_format_f32, 2, 44100, ma_waveform_type_square, volume, frequency);
+		ma_waveform_init(&config, &waveform);
+
+		deviceConfig = ma_device_config_init(ma_device_type_playback);
+		deviceConfig.playback.format = ma_format_f32;
+		deviceConfig.playback.channels = 2;
+		deviceConfig.sampleRate = 48000;
+		deviceConfig.dataCallback = sound_data_callback;
+		deviceConfig.pUserData = &sound_data;
+
+		ma_device_init(NULL, &deviceConfig, &soundDevice);
+		ma_device_start(&soundDevice);
 	}
 
 	inline void clearScreen()

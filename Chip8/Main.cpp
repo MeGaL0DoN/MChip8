@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iostream>   
 #include <filesystem>
+#include <thread>
 
 #include "Shader.h"
 #include "ChipCore.h"
@@ -132,9 +133,18 @@ void renderImGUI()
             static bool showForegroundPicker { false };
             static bool showBackgroundPicker { false };
 
-            ImGui::SliderInt("CPU Frequency", &chipCore.CPUfrequency, 60, 1200);
-            ImGui::Separator();
+            ImGui::SeparatorText("CPU");
+            ImGui::SliderInt("CPU Frequency", &chipCore.CPUfrequency, 60, 1500);
+
+            ImGui::SeparatorText("Sound");
             ImGui::Checkbox("Enable Sound", &chipCore.enableSound);
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            static int volume {50};
+            if (ImGui::SliderInt("Volume", &volume, 0, 100))
+                chipCore.volume = volume / 100.0;
+
             ImGui::SeparatorText("UI");
 
             if (ImGui::Checkbox("Pixel Borders", &pixelBorders))
@@ -190,6 +200,9 @@ void renderImGUI()
 
                 chipCore.CPUfrequency = 500;
                 chipCore.enableSound = true;
+
+                volume = 50;
+                chipCore.volume = 0.5;
             }
 
             ImGui::EndMenu();
@@ -355,33 +368,38 @@ int main() {
     loadKeyConfig();
     loadROM(L"ROMs/chipLogo.ch8");
 
-    double lastFrameTime = glfwGetTime();
-    double cpuFrequencyTimer{};
-    double renderTimer{};
+    double lastTime = glfwGetTime();
+    double timer{};
+    double cpuRemainderCycles{};
 
     while (!glfwWindowShouldClose(window)) 
     {
-        double currentFrameTime = glfwGetTime();
-        double deltaTime = currentFrameTime - lastFrameTime;
+        double currentTime = glfwGetTime();
+        double deltaTime = currentTime - lastTime;
+        timer += deltaTime;
 
-        cpuFrequencyTimer += deltaTime;
-        renderTimer += deltaTime;
+        if (timer >= 1.0 / 60)
+        {
+            timer = 0;
 
-        if (cpuFrequencyTimer >= 1.0 / chipCore.CPUfrequency)
-        {
-            if (!pause) chipCore.emulateCycle();
-            cpuFrequencyTimer = 0;
-        }
-        if (renderTimer >= 1.0 / 60)
-        {
-            renderTimer = 0;
-            if (!pause) chipCore.updateTimers();
+            if (!pause)
+            {
+                double cycles = (chipCore.CPUfrequency / 60.0) + cpuRemainderCycles;
+                int wholeCycles { static_cast<int>(cycles) };
+                cpuRemainderCycles = cycles - wholeCycles;
+
+                for (int i = 0; i < wholeCycles; i++)
+                    chipCore.emulateCycle();
+
+                chipCore.updateTimers();
+            }
 
             glfwPollEvents();
-            render();
+            render();         
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
-        lastFrameTime = currentFrameTime;
+        lastTime = currentTime;
     }
 
     ImGui_ImplOpenGL3_Shutdown();
